@@ -34,7 +34,13 @@ export const AboutSection: React.FC = () => {
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
         {/* Left Heading */}
-        <div className="lg:col-span-5">
+        <motion.div
+          initial={{ opacity: 0, y: 32, filter: 'blur(4px)' }}
+          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-5"
+        >
           <span className="text-xs font-mono font-bold tracking-widest text-[#a2d7ff] uppercase">
             Philosophy
           </span>
@@ -53,7 +59,7 @@ export const AboutSection: React.FC = () => {
               手描きの設計図から立ち上げた本ポートフォリオは、制作者としてのアイデンティティと未来への意志を具現化した空間です。
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right 4 Pillars */}
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -62,10 +68,11 @@ export const AboutSection: React.FC = () => {
             return (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                initial={{ opacity: 0, y: 30, filter: 'blur(3px)' }}
+                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                viewport={{ once: true, margin: '-50px' }}
+                whileHover={{ y: -4, transition: { duration: 0.25 } }}
+                transition={{ duration: 0.65, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-sky-400/30 transition-all duration-300 group"
               >
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/20 flex items-center justify-center text-[#a2d7ff] mb-4 group-hover:bg-[#a2d7ff] group-hover:text-[#05070d] transition-colors">

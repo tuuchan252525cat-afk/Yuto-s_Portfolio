@@ -38,7 +38,13 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
       className="relative py-24 max-w-7xl mx-auto px-6 sm:px-8 z-10"
     >
       {/* Intro Header matching reference site */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end mb-16">
+      <motion.div
+        initial={{ opacity: 0, y: 28, filter: 'blur(4px)' }}
+        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end mb-16"
+      >
         <div className="md:col-span-7">
           <p className="text-xs font-mono font-bold tracking-widest text-[#a2d7ff] uppercase mb-2">
             All Projects
@@ -52,10 +58,16 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
             作品を選ぶと、制作背景や使用技術、ビジュアルの詳細へ進めます。宇宙の静謐さとタイポグラフィの余白を融合した制作群。
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Category Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-50px' }}
+        transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-wrap items-center justify-between gap-3 mb-12"
+      >
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <span className="text-xs text-slate-500 font-mono flex items-center gap-1 mr-2 shrink-0">
             <Filter className="w-3 h-3" /> Filter:
@@ -85,11 +97,11 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
             <span>作品を編集・追加</span>
           </button>
         )}
-      </div>
+      </motion.div>
 
-      {/* Projects Grid with Staggered Visual Layout */}
+      {/* Projects Grid with Staggered Visual Layout & Scroll In Animations */}
       <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {filteredProjects.map((project, index) => {
             // Apply slight offset to 2nd card in each row on desktop for editorial rhythm
             const isOffset = index % 3 === 1;
@@ -97,10 +109,16 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
             return (
               <motion.article
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 36, filter: 'blur(3px)' }}
+                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                viewport={{ once: true, margin: '-50px' }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.45, delay: index * 0.05 }}
+                whileHover={{ y: -6, transition: { duration: 0.25, ease: 'easeOut' } }}
+                transition={{
+                  duration: 0.65,
+                  delay: (index % 3) * 0.1,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
                 key={project.id}
                 onClick={() => onSelectProject(project)}
                 className={`group cursor-pointer flex flex-col ${

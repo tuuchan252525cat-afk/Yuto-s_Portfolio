@@ -58,7 +58,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
         {/* Left Side: Headline & Mail Link */}
-        <div className="lg:col-span-6 space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 32, filter: 'blur(4px)' }}
+          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-6 space-y-6"
+        >
           <span className="text-xs font-mono font-bold tracking-widest text-[#a2d7ff] uppercase">
             Contact
           </span>
@@ -163,10 +169,16 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             <span>•</span>
             <span>Location: Miyazaki / Remote</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Side: Interactive Inquiry Form */}
-        <div className="lg:col-span-6">
+        <motion.div
+          initial={{ opacity: 0, y: 36, filter: 'blur(4px)' }}
+          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.85, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-6"
+        >
           <div className="rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-xl p-8 sm:p-10 shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-[#a2d7ff]" />
@@ -285,7 +297,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
               </form>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

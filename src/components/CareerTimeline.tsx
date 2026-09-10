@@ -61,7 +61,13 @@ export const CareerTimeline: React.FC<CareerTimelineProps> = ({
       className="relative py-20 max-w-7xl mx-auto px-6 sm:px-8 z-10"
     >
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+      <motion.div
+        initial={{ opacity: 0, y: 28, filter: 'blur(4px)' }}
+        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14"
+      >
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#a2d7ff] animate-ping" />
@@ -132,12 +138,18 @@ export const CareerTimeline: React.FC<CareerTimelineProps> = ({
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Timeline Container */}
       <div className="relative pl-6 sm:pl-10">
         {/* Glowing vertical spine line */}
-        <div className="absolute left-[11px] sm:left-[19px] top-2 bottom-6 w-[2px] bg-gradient-to-b from-[#a2d7ff] via-blue-500/40 to-white/10" />
+        <motion.div
+          initial={{ scaleY: 0, originY: 0, opacity: 0 }}
+          whileInView={{ scaleY: 1, opacity: 1 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+          className="absolute left-[11px] sm:left-[19px] top-2 bottom-6 w-[2px] bg-gradient-to-b from-[#a2d7ff] via-blue-500/40 to-white/10"
+        />
 
         <div className="space-y-10">
           {filteredItems.map((item, index) => {
@@ -148,10 +160,15 @@ export const CareerTimeline: React.FC<CareerTimelineProps> = ({
             return (
               <motion.div
                 key={item.id}
-                initial={{ opacity: 0, x: -16 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 32, filter: 'blur(3px)' }}
+                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                 viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
+                transition={{
+                  duration: 0.6,
+                  delay: (index % 4) * 0.1,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
                 className="relative group"
               >
                 {/* Timeline node pin */}

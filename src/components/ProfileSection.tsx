@@ -35,7 +35,13 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
       className="relative py-20 md:py-28 max-w-7xl mx-auto px-6 sm:px-8 z-10"
     >
       {/* Section Header */}
-      <div className="mb-12">
+      <motion.div
+        initial={{ opacity: 0, y: 28, filter: 'blur(4px)' }}
+        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        className="mb-12"
+      >
         <span className="text-xs font-mono font-bold tracking-widest text-[#a2d7ff] uppercase">
           Profile & Philosophy
         </span>
@@ -45,12 +51,18 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
         <p className="text-sm text-slate-400 mt-2">
           手描きスケッチの構想を忠実に再現したプロフィールと制作理念
         </p>
-      </div>
+      </motion.div>
 
       {/* Main Profile Layout based on the sketch:
           [ 写真 (Photo) ]   [ 岩本 佑都 (Yuto Iwamoto) ]
       */}
-      <div className="relative rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.07] to-white/[0.02] backdrop-blur-xl p-8 sm:p-12 shadow-2xl shadow-black/50 overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 36, filter: 'blur(4px)' }}
+        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+        className="relative rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.07] to-white/[0.02] backdrop-blur-xl p-8 sm:p-12 shadow-2xl shadow-black/50 overflow-hidden"
+      >
         {/* Subtle decorative glow in top-right */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -194,7 +206,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             手描き図面の矢印指示に基づき、MIYAZAKI frogs 2期生からの軌跡を時系列で展開
           </p>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };
