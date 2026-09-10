@@ -28,6 +28,11 @@ import {
   Lock,
   KeyRound,
   ShieldAlert,
+  Database,
+  Download,
+  Copy,
+  Code,
+  Cloud,
 } from 'lucide-react';
 import { Project, CareerItem, ProfileData, FoodRecommendation } from '../types';
 import {
@@ -48,7 +53,7 @@ interface AdminPortalModalProps {
   onSaveCareer: (career: CareerItem[]) => void;
   onOpenProjectManager: (projectId?: string) => void;
   onOpenCareerManager: () => void;
-  initialTab?: 'food' | 'projects' | 'career' | 'profile';
+  initialTab?: 'food' | 'projects' | 'career' | 'profile' | 'sync';
 }
 
 export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
@@ -64,7 +69,7 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
   onOpenCareerManager,
   initialTab = 'food',
 }) => {
-  const [activeTab, setActiveTab] = useState<'food' | 'projects' | 'career' | 'profile'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'food' | 'projects' | 'career' | 'profile' | 'sync'>(initialTab);
   const [foodItems, setFoodItems] = useState<FoodRecommendation[]>([]);
   const [foodFilter, setFoodFilter] = useState<'all' | 'want_to_try' | 'visited' | 'favorite'>('all');
   const [searchFoodQuery, setSearchFoodQuery] = useState('');
@@ -247,11 +252,122 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
     }
   };
 
+  // Handle photo file upload and compression
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        setProfileForm((prev) => ({ ...prev, photoUrl: dataUrl }));
+        showToast('新しいプロフィール画像をセットしました（「変更を保存する」で確定）');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle saving profile
   const handleSaveProfileForm = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveProfile(profileForm);
     showToast('プロフィール情報を保存・更新しました');
+  };
+
+  const [copiedTsCode, setCopiedTsCode] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [isResyncing, setIsResyncing] = useState(false);
+
+  // Generate valid TypeScript portfolioData.ts file contents
+  const generatePortfolioDataTs = () => {
+    return `import { Project, CareerItem, ProfileData } from '../types';
+
+export const INITIAL_PROFILE: ProfileData = ${JSON.stringify(profile, null, 2)};
+
+export const INITIAL_CAREER: CareerItem[] = ${JSON.stringify(careerList, null, 2)};
+
+export const INITIAL_PROJECTS: Project[] = ${JSON.stringify(projects, null, 2)};
+`;
+  };
+
+  const handleCopyTsCode = () => {
+    const code = generatePortfolioDataTs();
+    navigator.clipboard.writeText(code);
+    setCopiedTsCode(true);
+    showToast('GitHub用 portfolioData.ts のTypeScriptコードをクリップボードにコピーしました');
+    setTimeout(() => setCopiedTsCode(false), 3000);
+  };
+
+  const handleCopyBackupJson = () => {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      profile,
+      careerList,
+      projects,
+      foodItems,
+    };
+    navigator.clipboard.writeText(JSON.stringify(backup, null, 2));
+    setCopiedJson(true);
+    showToast('全データのJSONをクリップボードにコピーしました');
+    setTimeout(() => setCopiedJson(false), 3000);
+  };
+
+  const handleDownloadBackupFile = () => {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      profile,
+      careerList,
+      projects,
+      foodItems,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `iwamoto-portfolio-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('バックアップJSONファイルをダウンロードしました');
+  };
+
+  const handleForceCloudResync = async () => {
+    setIsResyncing(true);
+    try {
+      await onSaveProjects(projects);
+      await onSaveCareer(careerList);
+      await onSaveProfile(profile);
+      showToast('全データ（制作物・経歴・プロフィール）をFirestoreクラウドに完全同期・保存しました');
+    } catch (e) {
+      console.error('Resync failed', e);
+      showToast('クラウド同期中にエラーが発生しました');
+    } finally {
+      setIsResyncing(false);
+    }
   };
 
   // Filtered food list
@@ -372,6 +488,18 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
           >
             <User className="w-4 h-4 text-indigo-300" />
             <span>プロフィール設定</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('sync')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'sync'
+                ? 'bg-teal-400/20 text-teal-200 border border-teal-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <Database className="w-4 h-4 text-emerald-300" />
+            <span>クラウド同期・GitHub連携</span>
           </button>
         </div>
 
@@ -858,6 +986,70 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
                 </button>
               </div>
 
+              {/* Profile Photo Editor */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                {/* Photo Preview */}
+                <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-slate-900 border-2 border-teal-400/40 shrink-0 shadow-lg group">
+                  <img
+                    src={profileForm.photoUrl || '/profile_avatar.jpg'}
+                    alt="プロフィールプレビュー"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Photo Upload Actions */}
+                <div className="flex-1 space-y-3 w-full text-center sm:text-left">
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center justify-center sm:justify-start gap-2">
+                      <Camera className="w-4 h-4 text-teal-300" />
+                      <span>プロフィール写真の設定</span>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      トップカードに表示されるあなたのアイコン画像です。端末の画像ファイル、または画像URLを設定できます。
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                    <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-400/20 hover:bg-teal-400/30 text-teal-300 border border-teal-400/40 cursor-pointer transition-colors shadow-sm">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>端末から写真を選択</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {profileForm.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileForm({ ...profileForm, photoUrl: '/profile_avatar.jpg' });
+                          showToast('初期画像にリセットしました（「変更を保存する」で確定）');
+                        }}
+                        className="px-3 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer"
+                      >
+                        初期画像に戻す
+                      </button>
+                    )}
+                  </div>
+
+                  {/* URL Input fallback */}
+                  <div>
+                    <label className="block text-[11px] font-mono text-slate-400 mb-1">または画像URLを直接指定:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/my-photo.jpg"
+                      value={profileForm.photoUrl || ''}
+                      onChange={(e) => setProfileForm({ ...profileForm, photoUrl: e.target.value })}
+                      className="w-full px-3.5 py-1.5 bg-black/40 border border-white/10 rounded-xl text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-teal-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Names & Role */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -1007,6 +1199,114 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
                 </button>
               </div>
             </form>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 5: クラウド同期 & GitHub連携 (Cloud Sync & Backup)    */}
+          {/* ======================================================== */}
+          {activeTab === 'sync' && (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Database className="w-5 h-5 text-emerald-300" />
+                    <span>Firestore クラウド同期 & GitHubバックアップ</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    制作物や経歴などの編集内容はGoogle Firebase Firestoreにリアルタイム保存されるため、GitHubでコードを更新しても消えることはありません。
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleForceCloudResync}
+                  disabled={isResyncing}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 text-slate-950 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isResyncing ? 'animate-spin' : ''}`} />
+                  <span>{isResyncing ? '同期中...' : 'クラウド全データを今すぐ再同期'}</span>
+                </button>
+              </div>
+
+              {/* Status Overview Card */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+                    <Cloud className="w-4 h-4" />
+                    <span>Firestore データベース</span>
+                  </div>
+                  <div className="text-sm font-bold text-white">常時リアルタイム接続中</div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    ID: ai-studio-yutoiwamotoportf...
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-teal-400">
+                    <Layers className="w-4 h-4" />
+                    <span>保存済みデータ総数</span>
+                  </div>
+                  <div className="text-sm font-bold text-white">
+                    作品 {projects.length} 件 / 経歴 {careerList.length} 件 / 食事 {foodItems.length} 件
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    ブラウザを閉じても永続的に保持されます
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-indigo-400">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>セキュリティ & 認証</span>
+                  </div>
+                  <div className="text-sm font-bold text-white">管理者PIN保護済み</div>
+                  <div className="text-[11px] text-slate-400">
+                    パスコード認証者のみ編集可能
+                  </div>
+                </div>
+              </div>
+
+              {/* GitHub Code Export Section */}
+              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Code className="w-4 h-4 text-teal-300" />
+                      <span>GitHubリポジトリ更新用コード書き出し (portfolioData.ts)</span>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      GitHubの初期ソースコードファイル（src/data/portfolioData.ts）自体も最新の編集内容で同期したい場合は、下記のコードをコピーして貼り付けてください。
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyTsCode}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all cursor-pointer"
+                    >
+                      {copiedTsCode ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedTsCode ? 'コピー完了！' : 'TypeScriptコードをコピー'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadBackupFile}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-teal-400/20 hover:bg-teal-400/30 text-teal-300 border border-teal-400/40 transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>JSONバックアップ保存</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <pre className="p-4 bg-black/60 border border-white/10 rounded-xl text-xs font-mono text-slate-300 overflow-x-auto max-h-64 scrollbar-thin">
+                    <code>{generatePortfolioDataTs()}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

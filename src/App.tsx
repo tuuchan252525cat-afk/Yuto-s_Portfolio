@@ -38,14 +38,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_PROFILE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.photoUrl || parsed.photoUrl.includes('unsplash.com')) {
-          parsed.photoUrl = '/profile_avatar.jpg';
-        }
-        parsed.githubUrl = 'https://github.com/tuuchan252525cat-afk/';
-        parsed.instagramUrl = 'https://www.instagram.com/yuto.2525727/';
-        parsed.facebookUrl = 'https://www.facebook.com/profile.php?id=61577826275908';
-        return parsed;
+        return JSON.parse(saved);
       }
     } catch {
       // Fall through to initial
@@ -57,18 +50,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_CAREER_KEY);
       if (saved) {
-        const parsed: CareerItem[] = JSON.parse(saved);
-        const tour = parsed.find((item) => item.id === 'miyazaki-hinata-tour');
-        if (tour && (!tour.description.includes('大阪万博') || tour.description.includes('豊かな自然環境'))) {
-          tour.description = '宮崎県から、小中学生とともに科学技術を学びに大阪万博やカップヌードルミュージアムを訪問。新たな視点の探究を行った。';
-          tour.highlights = [
-            '小中学生とともに大阪万博を訪問し最先端の科学技術を探究',
-            'カップヌードルミュージアムでの創造的思考・発明プロセスの学習',
-            '宮崎から関西へのフィールドワークを通じた新たな視点の探究と実践',
-          ];
-          tour.skills = ['科学技術探究', '大阪万博', 'カップヌードルミュージアム', 'フィールドワーク', '創造的探究'];
-        }
-        return parsed;
+        return JSON.parse(saved);
       }
     } catch {
       // Fall through to initial

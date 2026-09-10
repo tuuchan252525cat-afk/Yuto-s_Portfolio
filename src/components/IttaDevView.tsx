@@ -232,25 +232,6 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
                         <div className="mt-5 p-3.5 rounded-xl bg-slate-900/60 border border-slate-700/50 text-xs sm:text-sm text-slate-300 leading-relaxed font-light">
                           {profile.bio || '宮崎を拠点に、ロボティクス、映像制作、Web開発、科学探究など多様な領域を横断して活動しています。「想像を形にし、誰かの心を動かす」ものづくりを追求しています。'}
                         </div>
-
-                        {/* Quick Contact & Action Buttons */}
-                        <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                          <button
-                            onClick={handleCopyEmail}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/15 text-slate-200 border border-white/10 transition-all cursor-pointer"
-                          >
-                            {copiedEmail ? <Check className="w-3.5 h-3.5 text-teal-300" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                            <span>{copiedEmail ? 'アドレスをコピーしました！' : 'メールアドレスをコピー'}</span>
-                          </button>
-
-                          <a
-                            href={`mailto:${profile.email || 'yuto.iwamoto@example.com'}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-400/10 hover:bg-teal-400/20 text-teal-300 border border-teal-400/30 transition-all cursor-pointer"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            <span>メールを送る</span>
-                          </a>
-                        </div>
                       </div>
 
                       {/* Right: Glowing Photo Container with user avatar */}
