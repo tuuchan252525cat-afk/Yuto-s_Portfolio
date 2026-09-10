@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { ProjectManagerModal } from './components/ProjectManagerModal';
 import { CareerManagerModal } from './components/CareerManagerModal';
+import { AdminPortalModal } from './components/AdminPortalModal';
 import { IttaDevView } from './components/IttaDevView';
 import {
   INITIAL_PROFILE,
@@ -79,10 +80,17 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [isCareerManagerOpen, setIsCareerManagerOpen] = useState(false);
+  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState(false);
+  const [adminPortalTab, setAdminPortalTab] = useState<'food' | 'projects' | 'career' | 'profile'>('food');
 
   const handleOpenProjectManager = (projectId?: string) => {
     setEditingProjectId(projectId || null);
     setIsAdminOpen(true);
+  };
+
+  const handleOpenAdminPortal = (tab: 'food' | 'projects' | 'career' | 'profile' = 'food') => {
+    setAdminPortalTab(tab);
+    setIsAdminPortalOpen(true);
   };
 
   // Realtime Cloud Synchronization with Firebase Firestore
@@ -195,22 +203,26 @@ export default function App() {
     }
   };
 
-  const handleUpdatePhoto = async (newPhotoUrl: string) => {
-    const updated = { ...profile, photoUrl: newPhotoUrl };
-    setProfile(updated);
+  const handleSaveProfile = async (newProfile: ProfileData) => {
+    setProfile(newProfile);
     try {
-      localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(updated));
+      localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(newProfile));
     } catch {
       // ignore
     }
     try {
-      await saveProfileToFirestore(updated);
+      await saveProfileToFirestore(newProfile);
     } catch (e) {
-      console.warn('Could not update profile in Firestore', e);
+      console.warn('Could not save profile to Firestore', e);
     }
   };
 
-  // URL query parameter support (?id=...)
+  const handleUpdatePhoto = async (newPhotoUrl: string) => {
+    const updated = { ...profile, photoUrl: newPhotoUrl };
+    await handleSaveProfile(updated);
+  };
+
+  // URL query parameter & hash support (?id=... / #admin)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get('id');
@@ -219,6 +231,9 @@ export default function App() {
       if (found) {
         setSelectedProject(found);
       }
+    }
+    if (params.get('admin') === 'true' || window.location.hash === '#admin') {
+      setIsAdminPortalOpen(true);
     }
   }, [projects]);
 
@@ -261,6 +276,26 @@ export default function App() {
         onUpdatePhoto={handleUpdatePhoto}
         onOpenCareerManager={() => setIsCareerManagerOpen(true)}
         onOpenProjectManager={handleOpenProjectManager}
+        onOpenAdminPortal={handleOpenAdminPortal}
+      />
+
+      {/* Dedicated Admin & Food Management Portal Modal */}
+      <AdminPortalModal
+        isOpen={isAdminPortalOpen}
+        onClose={() => setIsAdminPortalOpen(false)}
+        profile={profile}
+        projects={projects}
+        careerList={career}
+        onSaveProfile={handleSaveProfile}
+        onSaveProjects={handleSaveProjects}
+        onSaveCareer={handleSaveCareer}
+        onOpenProjectManager={(id) => {
+          handleOpenProjectManager(id);
+        }}
+        onOpenCareerManager={() => {
+          setIsCareerManagerOpen(true);
+        }}
+        initialTab={adminPortalTab}
       />
 
       {/* Project Detail Modal */}

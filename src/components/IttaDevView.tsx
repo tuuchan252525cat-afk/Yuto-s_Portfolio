@@ -16,13 +16,14 @@ import {
   Copy,
   FolderGit2,
   Calendar,
-  MessageSquare,
   ChevronRight,
   Filter,
+  ShieldCheck,
+  ArrowRight,
   Plus,
 } from 'lucide-react';
 import { ProfileData, CareerItem, Project } from '../types';
-import { submitContactInquiry } from '../lib/firebase';
+import { submitFoodRecommendation } from '../lib/firebase';
 
 interface IttaDevViewProps {
   profile: ProfileData;
@@ -32,6 +33,7 @@ interface IttaDevViewProps {
   onUpdatePhoto: (newPhotoUrl: string) => void;
   onOpenCareerManager?: () => void;
   onOpenProjectManager?: (projectId?: string) => void;
+  onOpenAdminPortal?: (tab?: 'food' | 'projects' | 'career' | 'profile') => void;
 }
 
 export const IttaDevView: React.FC<IttaDevViewProps> = ({
@@ -42,6 +44,7 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
   onUpdatePhoto,
   onOpenCareerManager,
   onOpenProjectManager,
+  onOpenAdminPortal,
 }) => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -49,24 +52,14 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
 
   // Food recommend form state
   const [foodInput, setFoodInput] = useState('');
-  const [foodSender, setFoodSender] = useState('');
+  const [foodNotes, setFoodNotes] = useState('');
   const [foodStatus, setFoodStatus] = useState<'idle' | 'sending' | 'success'>('idle');
-
-  // Contact form state
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
-  const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success'>('idle');
 
   const cards = [
     { id: 'hello', title: 'こんにちは', icon: Sparkles },
     { id: 'works', title: '制作物', icon: FolderGit2 },
     { id: 'career', title: '経歴・活動実績', icon: Calendar },
     { id: 'food', title: '今食べたいご飯', icon: Utensils },
-    { id: 'contact', title: 'お問い合わせ', icon: MessageSquare },
   ];
 
   // Copy email helper
@@ -82,42 +75,17 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
     if (!foodInput.trim()) return;
     setFoodStatus('sending');
     try {
-      await submitContactInquiry({
-        name: foodSender.trim() || '匿名のグルメ通',
-        email: 'food-recommendation@portfolio.local',
-        category: 'food_recommendation',
-        subject: 'おすすめご飯の提案',
-        message: foodInput.trim(),
+      await submitFoodRecommendation({
+        foodName: foodInput.trim(),
+        notes: foodNotes.trim() || undefined,
       });
     } catch (err) {
       console.warn('Could not save food recommendation to Firestore', err);
     } finally {
       setFoodStatus('success');
       setFoodInput('');
-      setFoodSender('');
+      setFoodNotes('');
       setTimeout(() => setFoodStatus('idle'), 6000);
-    }
-  };
-
-  // Submit General Contact Message to Firestore
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.message.trim()) return;
-    setContactStatus('sending');
-    try {
-      await submitContactInquiry({
-        name: contactForm.name.trim(),
-        email: contactForm.email.trim(),
-        subject: contactForm.subject.trim() || 'ポートフォリオからの連絡',
-        category: 'general_contact',
-        message: contactForm.message.trim(),
-      });
-    } catch (err) {
-      console.warn('Could not submit contact to Firestore', err);
-    } finally {
-      setContactStatus('success');
-      setContactForm({ name: '', email: '', subject: '', message: '' });
-      setTimeout(() => setContactStatus('idle'), 6000);
     }
   };
 
@@ -178,35 +146,13 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
           {/* Main Card Component */}
           <main className="relative rounded-2xl bg-[#0f1523]/95 border border-slate-700/60 p-6 sm:p-8 md:p-9 shadow-2xl backdrop-blur-md min-h-[460px] flex flex-col justify-between">
             <div>
-              {/* Card Title with itta.dev characteristic underline badge & quick actions */}
+              {/* Card Title with itta.dev characteristic underline badge */}
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3 pb-2 border-b border-slate-800/80">
                 <div className="font-bold relative text-2xl inline-block before:absolute before:-left-2 before:-right-2 before:bottom-0.5 before:h-3.5 before:rounded-xs before:bg-slate-700/90 before:transform">
                   <span className="relative z-10 text-white flex items-center gap-2">
                     {cards[currentCardIndex].title}
                   </span>
                 </div>
-
-                {/* Direct edit button for career card */}
-                {cards[currentCardIndex].id === 'career' && onOpenCareerManager && (
-                  <button
-                    onClick={onOpenCareerManager}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-400/10 hover:bg-teal-400/20 text-teal-300 border border-teal-400/30 transition-all cursor-pointer shadow-sm"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>経歴を編集・追加</span>
-                  </button>
-                )}
-
-                {/* Direct edit button for works card */}
-                {cards[currentCardIndex].id === 'works' && onOpenProjectManager && (
-                  <button
-                    onClick={() => onOpenProjectManager()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-400/10 hover:bg-teal-400/20 text-teal-300 border border-teal-400/30 transition-all cursor-pointer shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>作品を追加・編集</span>
-                  </button>
-                )}
               </div>
 
               {/* Animate Card Content */}
@@ -297,13 +243,13 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
                             <span>{copiedEmail ? 'アドレスをコピーしました！' : 'メールアドレスをコピー'}</span>
                           </button>
 
-                          <button
-                            onClick={() => setCurrentCardIndex(4)}
+                          <a
+                            href={`mailto:${profile.email || 'yuto.iwamoto@example.com'}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-400/10 hover:bg-teal-400/20 text-teal-300 border border-teal-400/30 transition-all cursor-pointer"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>メッセージを送る</span>
-                          </button>
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>メールを送る</span>
+                          </a>
                         </div>
                       </div>
 
@@ -323,19 +269,6 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
                             referrerPolicy="no-referrer"
                             className="w-full h-full object-cover"
                           />
-
-                          {/* Hover change photo button */}
-                          <label className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-xs text-white gap-1 transition-opacity cursor-pointer">
-                            <Camera className="w-5 h-5 text-teal-300" />
-                            <span className="font-semibold">写真を変更</span>
-                            <span className="text-[10px] text-slate-300">Firebaseに即時保存</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handlePhotoUpload}
-                              className="hidden"
-                            />
-                          </label>
                         </div>
                       </div>
                     </div>
@@ -565,27 +498,27 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
                         </p>
 
                         <form onSubmit={handleRecommendFood} className="space-y-2.5">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="space-y-2">
                             <input
                               type="text"
-                              placeholder="あなたのお名前（任意）"
-                              value={foodSender}
-                              onChange={(e) => setFoodSender(e.target.value)}
-                              disabled={foodStatus === 'sending'}
-                              className="bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
-                            />
-                            <input
-                              type="text"
-                              placeholder="おすすめの店名、カレーや寿司のイチオシなど..."
+                              placeholder="おすすめの料理名・店名（例: ○○寿司、△△インド料理...）"
                               value={foodInput}
                               onChange={(e) => setFoodInput(e.target.value)}
                               disabled={foodStatus === 'sending'}
                               required
-                              className="sm:col-span-2 bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
+                              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
+                            />
+                            <input
+                              type="text"
+                              placeholder="おすすめポイントや場所・一言メモ（任意）"
+                              value={foodNotes}
+                              onChange={(e) => setFoodNotes(e.target.value)}
+                              disabled={foodStatus === 'sending'}
+                              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
                             />
                           </div>
 
-                          <div className="flex justify-end">
+                          <div className="flex justify-end pt-1">
                             <button
                               type="submit"
                               disabled={foodStatus === 'sending' || !foodInput.trim()}
@@ -610,122 +543,13 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
                       </div>
                     </div>
                   )}
-
-                  {/* CARD 5: お問い合わせ (Direct Contact Form) */}
-                  {cards[currentCardIndex].id === 'contact' && (
-                    <div className="space-y-4">
-                      <div className="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4">
-                        <div className="font-bold text-sm text-teal-300 mb-1 flex items-center gap-2">
-                          <Mail className="w-4 h-4" />
-                          <span>お仕事のご相談・コラボレーション・メッセージ</span>
-                        </div>
-                        <p className="text-xs text-slate-300 leading-relaxed font-light">
-                          ロボティクス開発、映像制作、Webアプリケーション、探究活動に関するご相談など、お気軽にお送りください。
-                        </p>
-                      </div>
-
-                      <form onSubmit={handleContactSubmit} className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1">
-                              お名前 <span className="text-teal-400">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="山田 太郎"
-                              value={contactForm.name}
-                              onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                              disabled={contactStatus === 'sending'}
-                              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-300 mb-1">
-                              メールアドレス <span className="text-teal-400">*</span>
-                            </label>
-                            <input
-                              type="email"
-                              required
-                              placeholder="name@example.com"
-                              value={contactForm.email}
-                              onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                              disabled={contactStatus === 'sending'}
-                              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">
-                            ご用件・件名
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="プロジェクトに関するご相談 / お問い合わせ"
-                            value={contactForm.subject}
-                            onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                            disabled={contactStatus === 'sending'}
-                            className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-300 mb-1">
-                            メッセージ内容 <span className="text-teal-400">*</span>
-                          </label>
-                          <textarea
-                            required
-                            rows={4}
-                            placeholder="ご相談内容やメッセージをご自由にご記入ください..."
-                            value={contactForm.message}
-                            onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                            disabled={contactStatus === 'sending'}
-                            className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-400 resize-none"
-                          />
-                        </div>
-
-                        <div className="flex justify-between items-center pt-1">
-                          <button
-                            type="button"
-                            onClick={handleCopyEmail}
-                            className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-teal-300 transition-colors cursor-pointer"
-                          >
-                            <Copy className="w-3 h-3" />
-                            <span>直接メールを送る（{profile.email}）</span>
-                          </button>
-
-                          <button
-                            type="submit"
-                            disabled={contactStatus === 'sending' || !contactForm.name || !contactForm.email || !contactForm.message}
-                            className="cursor-pointer active:scale-[98%] inline-flex font-bold items-center justify-center gap-1.5 rounded-lg text-xs transition-all bg-teal-300 hover:bg-teal-200 text-teal-950 px-5 py-2 disabled:opacity-50 shadow-md shadow-teal-500/20"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>{contactStatus === 'sending' ? '送信中...' : 'メッセージを送信する'}</span>
-                          </button>
-                        </div>
-
-                        {contactStatus === 'success' && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-3 rounded-lg bg-teal-950/60 border border-teal-400/40 text-xs text-teal-300 flex items-center gap-2"
-                          >
-                            <Check className="w-4 h-4 text-teal-300 shrink-0" />
-                            <span>メッセージを送信しました！Firebaseに保存されました。確認次第ご連絡いたします。</span>
-                          </motion.div>
-                        )}
-                      </form>
-                    </div>
-                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
           </main>
         </div>
 
-        {/* Bottom Bar: 3 Rounded Square Social Buttons matching itta.dev */}
+        {/* Bottom Bar: 3 Rounded Square Social Buttons matching itta.dev + Admin Portal */}
         <footer className="my-6 flex items-center justify-between flex-wrap gap-4 pt-2">
           <div className="flex items-center space-x-2.5">
             {/* X (Twitter) */}
@@ -781,37 +605,25 @@ export const IttaDevView: React.FC<IttaDevViewProps> = ({
             </a>
 
             {/* Email */}
-            <a
-              href={`mailto:${profile.email}`}
+            <button
+              onClick={handleCopyEmail}
               className="size-10 rounded-lg bg-white/[0.08] border border-white/10 hover:border-teal-400/50 active:bg-teal-300 text-white hover:bg-teal-300 hover:text-teal-950 hover:shadow-lg hover:shadow-teal-500/30 transition-all flex items-center justify-center cursor-pointer"
-              title="メールを送る"
+              title={copiedEmail ? 'コピーしました！' : `メールアドレスをコピー: ${profile.email}`}
             >
-              <Mail className="w-4 h-4" />
-            </a>
+              {copiedEmail ? <Check className="w-4 h-4 text-teal-300" /> : <Mail className="w-4 h-4" />}
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Direct button to open Project Manager */}
-            {onOpenProjectManager && (
+            {/* Discreet Admin Portal Button */}
+            {onOpenAdminPortal && (
               <button
-                onClick={() => onOpenProjectManager()}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-teal-300 font-mono transition-colors cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/5"
-                title="制作物・画像の追加と編集"
+                onClick={() => onOpenAdminPortal('food')}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-teal-300 font-mono transition-all cursor-pointer bg-white/[0.03] hover:bg-white/[0.08] px-2.5 py-1.5 rounded-lg border border-white/5"
+                title="管理者用ポータル（パスコード認証）"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>作品管理</span>
-              </button>
-            )}
-
-            {/* Direct button to open Career Manager */}
-            {onOpenCareerManager && (
-              <button
-                onClick={onOpenCareerManager}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-teal-300 font-mono transition-colors cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/5"
-                title="経歴・活動実績を編集"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>経歴管理</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400 hover:text-teal-300" />
+                <span className="text-[11px]">管理</span>
               </button>
             )}
           </div>

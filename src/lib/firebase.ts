@@ -12,7 +12,7 @@ import {
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { Project, CareerItem, ProfileData } from '../types';
+import { Project, CareerItem, ProfileData, FoodRecommendation } from '../types';
 import {
   INITIAL_PROJECTS,
   INITIAL_CAREER,
@@ -46,6 +46,7 @@ export const PROJECTS_COLLECTION = 'projects';
 export const CAREERS_COLLECTION = 'careers';
 export const PROFILE_COLLECTION = 'profile';
 export const INQUIRIES_COLLECTION = 'inquiries';
+export const FOOD_COLLECTION = 'food_recommendations';
 
 // ----------------------------------------------------
 // Realtime Projects Sync
@@ -294,4 +295,60 @@ export async function submitContactInquiry(inquiry: ContactInquiry) {
     createdAt: new Date().toISOString(),
     serverTimestamp: serverTimestamp(),
   });
+}
+
+// ----------------------------------------------------
+// Food Recommendations
+// ----------------------------------------------------
+export function subscribeToFoodRecommendations(
+  onUpdate: (items: FoodRecommendation[]) => void,
+  onError?: (error: Error) => void
+) {
+  const foodCol = collection(db, FOOD_COLLECTION);
+  return onSnapshot(
+    foodCol,
+    (snapshot) => {
+      const items: FoodRecommendation[] = [];
+      snapshot.forEach((d) => {
+        items.push({
+          id: d.id,
+          ...(d.data() as Omit<FoodRecommendation, 'id'>),
+        });
+      });
+      // Sort newest first
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      onUpdate(items);
+    },
+    (err) => {
+      console.warn('Firestore food recommendations subscription error:', err);
+      if (onError) onError(err);
+    }
+  );
+}
+
+export async function submitFoodRecommendation(food: {
+  foodName: string;
+  restaurantOrArea?: string;
+  notes?: string;
+}) {
+  const foodCol = collection(db, FOOD_COLLECTION);
+  return await addDoc(foodCol, {
+    ...food,
+    status: 'want_to_try',
+    createdAt: new Date().toISOString(),
+    serverTimestamp: serverTimestamp(),
+  });
+}
+
+export async function updateFoodRecommendationStatus(
+  id: string,
+  status: 'want_to_try' | 'visited' | 'favorite'
+) {
+  const docRef = doc(db, FOOD_COLLECTION, id);
+  await setDoc(docRef, { status, updatedAt: new Date().toISOString() }, { merge: true });
+}
+
+export async function deleteFoodRecommendation(id: string) {
+  const docRef = doc(db, FOOD_COLLECTION, id);
+  await deleteDoc(docRef);
 }

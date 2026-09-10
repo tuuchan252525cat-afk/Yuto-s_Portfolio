@@ -19,5 +19,17 @@ service cloud.firestore {
       allow read: if true;
       allow update, delete: if true;
     }
+
+    // Profile collection: readable and writable by all
+    match /profile/{profileId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Food recommendations collection: readable and writable
+    match /food_recommendations/{foodId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

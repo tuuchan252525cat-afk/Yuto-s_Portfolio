@@ -44,3 +44,12 @@ export interface ProfileData {
   facebookUrl?: string;
   frogsCohort: string;
 }
+
+export interface FoodRecommendation {
+  id: string;
+  foodName: string;
+  restaurantOrArea?: string;
+  notes?: string;
+  status?: 'want_to_try' | 'visited' | 'favorite';
+  createdAt: string;
+}
