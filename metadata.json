@@ -1,0 +1,6 @@
+{
+  "name": "Yuto Iwamoto Portfolio",
+  "description": "岩本佑都（Yuto Iwamoto）のクリエイティブポートフォリオサイト。モダンな宇宙的デザイン、アニメーション遷移、経歴タイムライン、制作実績ギャラリーを搭載。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
