@@ -1,13 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { CosmosCanvas } from './components/CosmosCanvas';
-import { Navbar } from './components/Navbar';
-import { HeroSection } from './components/HeroSection';
-import { ProjectsGrid } from './components/ProjectsGrid';
-import { ProfileSection } from './components/ProfileSection';
-import { CareerTimeline } from './components/CareerTimeline';
-import { AboutSection } from './components/AboutSection';
-import { ContactSection } from './components/ContactSection';
-import { Footer } from './components/Footer';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { ProjectManagerModal } from './components/ProjectManagerModal';
 import { CareerManagerModal } from './components/CareerManagerModal';
@@ -18,25 +9,20 @@ import {
   INITIAL_PROJECTS,
 } from './data/portfolioData';
 import { Project, ProfileData, CareerItem } from './types';
-import { Sparkles, Layers } from 'lucide-react';
+import {
+  subscribeToProjects,
+  subscribeToCareer,
+  subscribeToProfile,
+  saveAllProjectsToFirestore,
+  saveAllCareerToFirestore,
+  saveProfileToFirestore,
+} from './lib/firebase';
 
 const STORAGE_PROJECTS_KEY = 'iwamoto-portfolio-projects-v2';
 const STORAGE_PROFILE_KEY = 'iwamoto-portfolio-profile-v2';
 const STORAGE_CAREER_KEY = 'iwamoto-portfolio-career-v2';
-const STORAGE_VIEW_MODE_KEY = 'iwamoto-portfolio-viewmode-v1';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<'simple' | 'full'>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_VIEW_MODE_KEY);
-      if (saved === 'full' || saved === 'simple') return saved;
-    } catch {
-      // ignore
-    }
-    // Default to 'simple' (itta.dev style requested by user)
-    return 'simple';
-  });
-
   const [projects, setProjects] = useState<Project[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_PROJECTS_KEY);
@@ -94,23 +80,55 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [isCareerManagerOpen, setIsCareerManagerOpen] = useState(false);
 
-  // Sync viewMode to localStorage
-  const handleToggleViewMode = (mode: 'simple' | 'full') => {
-    setViewMode(mode);
-    try {
-      localStorage.setItem(STORAGE_VIEW_MODE_KEY, mode);
-    } catch {
-      // ignore
-    }
-  };
-
   const handleOpenProjectManager = (projectId?: string) => {
     setEditingProjectId(projectId || null);
     setIsAdminOpen(true);
   };
 
-  // Sync projects to localStorage
-  const handleSaveProjects = (newProjects: Project[]) => {
+  // Realtime Cloud Synchronization with Firebase Firestore
+  useEffect(() => {
+    const unsubProjects = subscribeToProjects((loadedProjects) => {
+      if (loadedProjects && loadedProjects.length > 0) {
+        setProjects(loadedProjects);
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(loadedProjects));
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    const unsubCareer = subscribeToCareer((loadedCareer) => {
+      if (loadedCareer && loadedCareer.length > 0) {
+        setCareer(loadedCareer);
+        try {
+          localStorage.setItem(STORAGE_CAREER_KEY, JSON.stringify(loadedCareer));
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    const unsubProfile = subscribeToProfile((loadedProfile) => {
+      if (loadedProfile) {
+        setProfile(loadedProfile);
+        try {
+          localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(loadedProfile));
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    return () => {
+      unsubProjects();
+      unsubCareer();
+      unsubProfile();
+    };
+  }, []);
+
+  // Sync projects to Firestore + localStorage
+  const handleSaveProjects = async (newProjects: Project[]) => {
     setProjects(newProjects);
     if (selectedProject) {
       const refreshed = newProjects.find((p) => p.id === selectedProject.id);
@@ -121,28 +139,43 @@ export default function App() {
     } catch (e) {
       console.warn('Could not save projects to local storage', e);
     }
+    try {
+      await saveAllProjectsToFirestore(newProjects);
+    } catch (e) {
+      console.warn('Could not save projects to Firestore', e);
+    }
   };
 
-  // Sync career to localStorage
-  const handleSaveCareer = (newCareer: CareerItem[]) => {
+  // Sync career to Firestore + localStorage
+  const handleSaveCareer = async (newCareer: CareerItem[]) => {
     setCareer(newCareer);
     try {
       localStorage.setItem(STORAGE_CAREER_KEY, JSON.stringify(newCareer));
     } catch (e) {
       console.warn('Could not save career to local storage', e);
     }
+    try {
+      await saveAllCareerToFirestore(newCareer);
+    } catch (e) {
+      console.warn('Could not save career to Firestore', e);
+    }
   };
 
-  const handleResetCareer = () => {
+  const handleResetCareer = async () => {
     setCareer(INITIAL_CAREER);
     try {
       localStorage.removeItem(STORAGE_CAREER_KEY);
     } catch {
       // ignore
     }
+    try {
+      await saveAllCareerToFirestore(INITIAL_CAREER);
+    } catch (e) {
+      console.warn('Could not reset career in Firestore', e);
+    }
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     setProjects(INITIAL_PROJECTS);
     setProfile(INITIAL_PROFILE);
     setCareer(INITIAL_CAREER);
@@ -153,15 +186,27 @@ export default function App() {
     } catch {
       // ignore
     }
+    try {
+      await saveAllProjectsToFirestore(INITIAL_PROJECTS);
+      await saveAllCareerToFirestore(INITIAL_CAREER);
+      await saveProfileToFirestore(INITIAL_PROFILE);
+    } catch (e) {
+      console.warn('Could not reset defaults in Firestore', e);
+    }
   };
 
-  const handleUpdatePhoto = (newPhotoUrl: string) => {
+  const handleUpdatePhoto = async (newPhotoUrl: string) => {
     const updated = { ...profile, photoUrl: newPhotoUrl };
     setProfile(updated);
     try {
       localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(updated));
     } catch {
       // ignore
+    }
+    try {
+      await saveProfileToFirestore(updated);
+    } catch (e) {
+      console.warn('Could not update profile in Firestore', e);
     }
   };
 
@@ -207,118 +252,18 @@ export default function App() {
 
   return (
     <>
-      {/* View Mode Switcher Pill (Floating in top-right) */}
-      <aside aria-label="表示モード切替" className="fixed top-4 right-4 z-50 flex items-center bg-[#101726]/90 border border-slate-700/80 rounded-full p-1 backdrop-blur-md shadow-xl text-xs">
-        <button
-          onClick={() => handleToggleViewMode('simple')}
-          className={`px-3 py-1.5 rounded-full transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
-            viewMode === 'simple'
-              ? 'bg-teal-300 text-teal-950 font-bold shadow-sm'
-              : 'text-slate-400 hover:text-white'
-          }`}
-          title="https://itta.dev 風のシンプルカード形式"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>シンプル (itta.dev風)</span>
-        </button>
-        <button
-          onClick={() => handleToggleViewMode('full')}
-          className={`px-3 py-1.5 rounded-full transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
-            viewMode === 'full'
-              ? 'bg-[#a2d7ff] text-[#05070d] font-bold shadow-sm'
-              : 'text-slate-400 hover:text-white'
-          }`}
-          title="詳細スクロールギャラリー形式"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>詳細ギャラリー</span>
-        </button>
-      </aside>
+      {/* High-craft Simple Card Experience (itta.dev style) */}
+      <IttaDevView
+        profile={profile}
+        careerList={career}
+        projects={projects}
+        onSelectProject={handleSelectProject}
+        onUpdatePhoto={handleUpdatePhoto}
+        onOpenCareerManager={() => setIsCareerManagerOpen(true)}
+        onOpenProjectManager={handleOpenProjectManager}
+      />
 
-      {/* RENDER VIEW ACCORDING TO VIEW MODE */}
-      {viewMode === 'simple' ? (
-        /* 1. SIMPLE ITTA.DEV STYLE VIEW (Requested by User) */
-        <IttaDevView
-          profile={profile}
-          careerList={career}
-          projects={projects}
-          onSelectProject={handleSelectProject}
-          onUpdatePhoto={handleUpdatePhoto}
-          onSwitchToFullView={() => handleToggleViewMode('full')}
-          onOpenCareerManager={() => setIsCareerManagerOpen(true)}
-          onOpenProjectManager={handleOpenProjectManager}
-        />
-      ) : (
-        /* 2. FULL COSMIC SCROLL EDITORIAL VIEW */
-        <div className="relative min-h-screen bg-[#05070d] text-[#e2e8f0] selection:bg-[#a2d7ff] selection:text-[#05070d] overflow-x-hidden">
-          {/* Interactive Cosmos Background Canvas */}
-          <CosmosCanvas />
-
-          {/* Floating Nebula Background Glows */}
-          <div className="nebula nebula-a" aria-hidden="true" />
-          <div className="nebula nebula-b" aria-hidden="true" />
-
-          {/* Background Subtle Grid Texture */}
-          <div className="fixed inset-0 cosmic-grid-bg pointer-events-none z-0 opacity-40" />
-
-          {/* Primary Header & Navigation */}
-          <Navbar
-            onOpenContactModal={() => {
-              const contactEl = document.getElementById('contact');
-              contactEl?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          />
-
-          {/* Main Page Flow */}
-          <main className="relative z-10">
-            {/* 1. Hero Section (Cosmic Editorial Showcase) */}
-            <HeroSection
-              featuredProject={projects[0] || INITIAL_PROJECTS[0]}
-              onSelectProject={handleSelectProject}
-            />
-
-            {/* 2. Works & Projects Grid */}
-            <ProjectsGrid
-              projects={projects}
-              onSelectProject={handleSelectProject}
-              onOpenProjectManager={() => handleOpenProjectManager()}
-            />
-
-            {/* 3. Profile Section (Hand-drawn sketch layout: 写真 on left, 岩本佑都 on right, 下に経歴) */}
-            <ProfileSection
-              profile={profile}
-              onUpdatePhoto={handleUpdatePhoto}
-            />
-
-            {/* 4. Career Timeline (Starting prominently with MIYAZAKI frogs 2期生) */}
-            <CareerTimeline
-              careerList={career}
-              onOpenCareerManager={() => setIsCareerManagerOpen(true)}
-            />
-
-            {/* 5. About & Philosophy */}
-            <AboutSection />
-
-            {/* 6. Contact Section */}
-            <ContactSection
-              email={profile.email}
-              githubUrl={profile.githubUrl}
-              instagramUrl={profile.instagramUrl}
-              facebookUrl={profile.facebookUrl}
-              xUrl={profile.xUrl}
-            />
-          </main>
-
-          {/* Footer */}
-          <Footer
-            profile={profile}
-            onOpenAdmin={() => setIsAdminOpen(true)}
-            onOpenCareerManager={() => setIsCareerManagerOpen(true)}
-          />
-        </div>
-      )}
-
-      {/* Project Detail Modal (Opens in both views) */}
+      {/* Project Detail Modal */}
       <ProjectDetailModal
         project={selectedProject}
         onClose={handleCloseProjectModal}

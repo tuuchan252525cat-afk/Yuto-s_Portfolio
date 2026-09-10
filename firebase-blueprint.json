@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "projects": {
+      "title": "Projects",
+      "description": "Portfolio projects showcase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "year": { "type": "string" },
+        "role": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "thumbnail": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "accentColor": { "type": "string" },
+        "externalUrl": { "type": "string" },
+        "githubUrl": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category"]
+    },
+    "careers": {
+      "title": "Career Items",
+      "description": "Career history and milestones",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "year": { "type": "string" },
+        "period": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "details": { "type": "array", "items": { "type": "string" } },
+        "icon": { "type": "string" },
+        "badge": { "type": "string" },
+        "link": { "type": "string" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category"]
+    },
+    "inquiries": {
+      "title": "Contact Inquiries",
+      "description": "Inquiries submitted through the contact form",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "subject": { "type": "string" },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    }
+  }
+}

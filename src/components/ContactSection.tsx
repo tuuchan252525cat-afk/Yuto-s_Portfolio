@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Send, CheckCircle2, Copy, Check, Sparkles, MessageSquare, ArrowUpRight } from 'lucide-react';
+import { submitContactInquiry } from '../lib/firebase';
 
 interface ContactSectionProps {
   email?: string;
@@ -33,11 +34,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      await submitContactInquiry(formData);
+    } catch (err) {
+      console.warn('Could not submit inquiry to Firestore, proceeding with fallback', err);
+    } finally {
       setIsSubmitting(false);
       setSubmitted(true);
       setFormData({
@@ -47,7 +52,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
         message: '',
       });
       setTimeout(() => setSubmitted(false), 6000);
-    }, 900);
+    }
   };
 
   return (

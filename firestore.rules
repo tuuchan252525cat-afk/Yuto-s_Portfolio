@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Projects collection: readable by all, editable
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Careers collection: readable by all, editable
+    match /careers/{careerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Contact form submissions: can be created by anyone, readable
+    match /inquiries/{inquiryId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if true;
+    }
+  }
+}
