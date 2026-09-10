@@ -78,19 +78,24 @@ export const CareerManagerModal: React.FC<CareerManagerModalProps> = ({
     setTimeout(() => setSuccessNotice(null), 3000);
   };
 
-  const handleDeleteItem = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('この経歴項目を削除してもよろしいですか？')) {
+  const handleDeleteItem = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const target = careerList.find((item) => item.id === id);
+    const targetTitle = target ? `「${target.title}」` : 'この経歴項目';
+    if (confirm(`${targetTitle}を削除してもよろしいですか？`)) {
       const updated = careerList.filter((item) => item.id !== id);
       onSaveCareer(updated);
       if (selectedId === id) {
         if (updated.length > 0) {
           handleSelectItem(updated[0]);
         } else {
+          setSelectedId('');
           setEditingItem(null);
+          setHighlightsInput('');
+          setSkillsInput('');
         }
       }
-      setSuccessNotice('経歴項目を削除しました');
+      setSuccessNotice(`${targetTitle}を削除しました`);
       setTimeout(() => setSuccessNotice(null), 3000);
     }
   };
@@ -427,8 +432,17 @@ export const CareerManagerModal: React.FC<CareerManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Submit button */}
-                <div className="pt-2 flex justify-end">
+                {/* Submit button & Delete button */}
+                <div className="pt-2 flex items-center justify-between border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(editingItem.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>この経歴を削除</span>
+                  </button>
+
                   <button
                     type="submit"
                     className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold bg-teal-300 hover:bg-teal-200 text-teal-950 shadow-md shadow-teal-900/30 transition-all active:scale-[98%]"

@@ -99,24 +99,34 @@ export const ProjectManagerModal: React.FC<ProjectManagerModalProps> = ({
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync when modal opens or initialProjectId changes
+  // Sync when modal opens or initialProjectId/projects changes
   useEffect(() => {
     if (isOpen) {
-      const target = initialProjectId
-        ? projects.find((p) => p.id === initialProjectId)
-        : projects.find((p) => p.id === selectedId) || projects[0];
+      if (initialProjectId) {
+        const found = projects.find((p) => p.id === initialProjectId);
+        if (found) {
+          setSelectedId(found.id);
+          setEditingProject({ ...found });
+          setHighlightsText(found.highlights ? found.highlights.join('\n') : '');
+          return;
+        }
+      }
 
-      if (target) {
-        setSelectedId(target.id);
-        setEditingProject({ ...target });
-        setHighlightsText(target.highlights ? target.highlights.join('\n') : '');
+      const current = projects.find((p) => p.id === selectedId);
+      if (current) {
+        setEditingProject({ ...current });
+        setHighlightsText(current.highlights ? current.highlights.join('\n') : '');
       } else if (projects.length > 0) {
         setSelectedId(projects[0].id);
         setEditingProject({ ...projects[0] });
         setHighlightsText(projects[0].highlights ? projects[0].highlights.join('\n') : '');
+      } else {
+        setSelectedId('');
+        setEditingProject(null);
+        setHighlightsText('');
       }
     }
-  }, [isOpen, initialProjectId]);
+  }, [isOpen, initialProjectId, projects]);
 
   if (!isOpen) return null;
 
@@ -152,19 +162,23 @@ export const ProjectManagerModal: React.FC<ProjectManagerModalProps> = ({
     setTimeout(() => setSuccessNotice(null), 3000);
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('この作品を削除してもよろしいですか？')) {
+  const handleDelete = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const target = projects.find((p) => p.id === id);
+    const targetTitle = target ? `「${target.title}」` : 'この作品';
+    if (confirm(`${targetTitle}を削除してもよろしいですか？`)) {
       const updated = projects.filter((p) => p.id !== id);
       onSaveProjects(updated);
       if (selectedId === id) {
         if (updated.length > 0) {
           handleSelectProject(updated[0]);
         } else {
+          setSelectedId('');
           setEditingProject(null);
+          setHighlightsText('');
         }
       }
-      setSuccessNotice('作品を削除しました');
+      setSuccessNotice(`${targetTitle}を削除しました`);
       setTimeout(() => setSuccessNotice(null), 3000);
     }
   };
@@ -757,9 +771,20 @@ export const ProjectManagerModal: React.FC<ProjectManagerModalProps> = ({
                 </div>
 
                 {/* Form Footer / Save Bar */}
-                <div className="px-6 py-4 border-t border-white/10 bg-[#090d18] flex items-center justify-between shrink-0">
-                  <div className="text-xs text-slate-400 font-mono">
-                    ID: <span className="text-slate-500">{editingProject.id}</span>
+                <div className="px-6 py-4 border-t border-white/10 bg-[#090d18] flex items-center justify-between shrink-0 flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-500 font-mono hidden sm:inline">
+                      ID: {editingProject.id}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingProject.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="この作品を一覧から完全に削除します"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>この作品を削除</span>
+                    </button>
                   </div>
                   <div className="flex items-center gap-3">
                     <button

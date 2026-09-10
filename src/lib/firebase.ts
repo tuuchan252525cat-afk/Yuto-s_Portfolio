@@ -55,24 +55,32 @@ export function subscribeToProjects(
   onError?: (error: Error) => void
 ) {
   const projectsCol = collection(db, PROJECTS_COLLECTION);
+  let isFirstLoad = true;
   return onSnapshot(
     projectsCol,
     async (snapshot) => {
       if (snapshot.empty) {
-        // First-time seed
-        console.log('Seeding initial projects to Firestore...');
-        try {
-          await seedInitialProjects();
-        } catch (e) {
-          console.warn('Could not auto-seed projects', e);
+        if (isFirstLoad) {
+          isFirstLoad = false;
+          // First-time seed
+          console.log('Seeding initial projects to Firestore...');
+          try {
+            await seedInitialProjects();
+          } catch (e) {
+            console.warn('Could not auto-seed projects', e);
+          }
+          onUpdate(INITIAL_PROJECTS);
+        } else {
+          onUpdate([]);
         }
-        onUpdate(INITIAL_PROJECTS);
       } else {
-        const loaded: Project[] = [];
+        isFirstLoad = false;
+        const loaded: (Project & { order?: number })[] = [];
         snapshot.forEach((d) => {
           loaded.push({ ...(d.data() as Project), id: d.id });
         });
-        // Sort if needed by order or year
+        // Sort by order
+        loaded.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         onUpdate(loaded);
       }
     },
@@ -85,10 +93,10 @@ export function subscribeToProjects(
 
 export async function seedInitialProjects() {
   const batch = writeBatch(db);
-  for (const project of INITIAL_PROJECTS) {
+  INITIAL_PROJECTS.forEach((project, index) => {
     const docRef = doc(db, PROJECTS_COLLECTION, project.id);
-    batch.set(docRef, project, { merge: true });
-  }
+    batch.set(docRef, { ...project, order: index, updatedAt: new Date().toISOString() }, { merge: true });
+  });
   await batch.commit();
 }
 
@@ -110,12 +118,31 @@ export async function deleteProjectFromFirestore(projectId: string) {
 }
 
 export async function saveAllProjectsToFirestore(projects: Project[]) {
-  const batch = writeBatch(db);
-  for (const p of projects) {
-    const docRef = doc(db, PROJECTS_COLLECTION, p.id);
-    batch.set(docRef, { ...p, updatedAt: new Date().toISOString() }, { merge: true });
+  try {
+    const projectsCol = collection(db, PROJECTS_COLLECTION);
+    const snapshot = await getDocs(projectsCol);
+    const newProjectIds = new Set(projects.map((p) => p.id));
+
+    const batch = writeBatch(db);
+
+    // Delete removed documents from Firestore
+    for (const docSnap of snapshot.docs) {
+      if (!newProjectIds.has(docSnap.id)) {
+        batch.delete(docSnap.ref);
+      }
+    }
+
+    // Upsert remaining projects with explicit order
+    projects.forEach((p, index) => {
+      const docRef = doc(db, PROJECTS_COLLECTION, p.id);
+      batch.set(docRef, { ...p, order: index, updatedAt: new Date().toISOString() }, { merge: true });
+    });
+
+    await batch.commit();
+  } catch (err) {
+    console.error('Error saving projects to Firestore:', err);
+    throw err;
   }
-  await batch.commit();
 }
 
 // ----------------------------------------------------
@@ -126,22 +153,30 @@ export function subscribeToCareer(
   onError?: (error: Error) => void
 ) {
   const careerCol = collection(db, CAREERS_COLLECTION);
+  let isFirstLoad = true;
   return onSnapshot(
     careerCol,
     async (snapshot) => {
       if (snapshot.empty) {
-        console.log('Seeding initial career items to Firestore...');
-        try {
-          await seedInitialCareer();
-        } catch (e) {
-          console.warn('Could not auto-seed career', e);
+        if (isFirstLoad) {
+          isFirstLoad = false;
+          console.log('Seeding initial career items to Firestore...');
+          try {
+            await seedInitialCareer();
+          } catch (e) {
+            console.warn('Could not auto-seed career', e);
+          }
+          onUpdate(INITIAL_CAREER);
+        } else {
+          onUpdate([]);
         }
-        onUpdate(INITIAL_CAREER);
       } else {
-        const loaded: CareerItem[] = [];
+        isFirstLoad = false;
+        const loaded: (CareerItem & { order?: number })[] = [];
         snapshot.forEach((d) => {
           loaded.push({ ...(d.data() as CareerItem), id: d.id });
         });
+        loaded.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         onUpdate(loaded);
       }
     },
@@ -154,10 +189,10 @@ export function subscribeToCareer(
 
 export async function seedInitialCareer() {
   const batch = writeBatch(db);
-  for (const item of INITIAL_CAREER) {
+  INITIAL_CAREER.forEach((item, index) => {
     const docRef = doc(db, CAREERS_COLLECTION, item.id);
-    batch.set(docRef, item, { merge: true });
-  }
+    batch.set(docRef, { ...item, order: index, updatedAt: new Date().toISOString() }, { merge: true });
+  });
   await batch.commit();
 }
 
@@ -179,12 +214,31 @@ export async function deleteCareerItemFromFirestore(itemId: string) {
 }
 
 export async function saveAllCareerToFirestore(careerItems: CareerItem[]) {
-  const batch = writeBatch(db);
-  for (const item of careerItems) {
-    const docRef = doc(db, CAREERS_COLLECTION, item.id);
-    batch.set(docRef, { ...item, updatedAt: new Date().toISOString() }, { merge: true });
+  try {
+    const careerCol = collection(db, CAREERS_COLLECTION);
+    const snapshot = await getDocs(careerCol);
+    const newIds = new Set(careerItems.map((c) => c.id));
+
+    const batch = writeBatch(db);
+
+    // Delete removed items
+    for (const docSnap of snapshot.docs) {
+      if (!newIds.has(docSnap.id)) {
+        batch.delete(docSnap.ref);
+      }
+    }
+
+    // Upsert remaining career items with order
+    careerItems.forEach((c, index) => {
+      const docRef = doc(db, CAREERS_COLLECTION, c.id);
+      batch.set(docRef, { ...c, order: index, updatedAt: new Date().toISOString() }, { merge: true });
+    });
+
+    await batch.commit();
+  } catch (err) {
+    console.error('Error saving career to Firestore:', err);
+    throw err;
   }
-  await batch.commit();
 }
 
 // ----------------------------------------------------
